@@ -1,5 +1,6 @@
-const API_URL_LAVADOS = "http://192.168.40.19:3000/lavados";
-const API_URL_PRESTAMOS = "http://192.168.40.19:3000/prestamos";
+// URLs de MockAPI corregidas 100% reales para tu base de datos en internet
+const API_URL_LAVADOS = "https://6a4886c6a033dcb98d64a1f0.mockapi.io/lavados"; 
+const API_URL_PRESTAMOS = "https://6a4887b3a033dcb98d64a283.mockapi.io/prestamos"; 
 
 const usuariosAutorizados = {
     "oscar": "123456789",
@@ -14,11 +15,9 @@ const mapeoLavadores = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Eventos de botones de sesión
     document.getElementById('btn-ingresar').addEventListener('click', ejecutarLogin);
     document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);
     
-    // Acciones de administración
     document.getElementById('btn-registrar').addEventListener('click', registrarLavado);
     document.getElementById('btn-prestamo').addEventListener('click', registrarPrestamo);
     document.getElementById('btn-finalizar').addEventListener('click', finalizarDia);
@@ -31,11 +30,9 @@ function ejecutarLogin() {
     if (contrasenaIngresada === usuariosAutorizados[usuarioSeleccionado.toLowerCase()]) {
         usuarioLogueado = usuarioSeleccionado;
         
-        // Ocultar pantalla de login y mostrar app principal
         document.getElementById('pantalla-login').classList.add('hidden');
         document.getElementById('app-principal').classList.remove('hidden');
         
-        // Colocar nombre en el encabezado
         document.getElementById('nombre-usuario-activo').innerText = usuarioLogueado === "Oscar" ? "Oscar (Administrador)" : `Empleado: ${usuarioLogueado}`;
         
         const vistaEmpleado = document.getElementById('vista-empleado');
@@ -49,7 +46,6 @@ function ejecutarLogin() {
             vistaAdmin.classList.add('hidden');
         }
         
-        // Limpiar el campo de contraseña por seguridad
         document.getElementById('login-password').value = "";
         actualizarPanel();
     } else {
@@ -82,22 +78,24 @@ async function registrarLavado() {
     };
 
     try {
-        await fetch(API_URL_LAVADOS, {
+        const respuesta = await fetch(API_URL_LAVADOS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(nuevoLavado)
         });
+        
+        if (!respuesta.ok) throw new Error("Error en MockAPI");
         
         alert(`Lavado registrado para ${lavador}. Valor: $${valorSeleccionado.toLocaleString()}`);
         document.getElementById('placa').value = ""; 
         actualizarPanel();
     } catch (error) {
         console.error("Error al guardar lavado:", error);
+        alert("❌ Error: No se pudo guardar el lavado en la nube. Revisa que el recurso 'lavados' exista en tu MockAPI.");
     }
 }
 
 async function registrarPrestamo(evento) {
-    // EVITA RECARGAR LA PÁGINA: Crucial para que no te eche de la sesión al hacer clic
     if (evento && evento.preventDefault) {
         evento.preventDefault();
     }
@@ -120,16 +118,14 @@ async function registrarPrestamo(evento) {
             body: JSON.stringify(nuevoPrestamo)
         });
         
-        if (!respuesta.ok) {
-            throw new Error(`Error del servidor: ${respuesta.status}`);
-        }
+        if (!respuesta.ok) throw new Error("Error en MockAPI");
         
         document.getElementById('monto-prestamo').value = "";
         alert(`Vale de $${monto.toLocaleString()} asignado con éxito a ${lavador}`);
         actualizarPanel();
     } catch (error) {
         console.error("Error al guardar préstamo:", error);
-        alert("⚠️ Error de conexión con la base de datos. Verifica que json-server esté corriendo.");
+        alert("❌ Error: No se pudo guardar el vale en la nube. Revisa que el recurso 'prestamos' exista en tu MockAPI.");
     }
 }
 
@@ -145,12 +141,12 @@ async function actualizarPanel() {
         const prestamos = await resPrestamos.json();
 
         // 1. RENDERS VISTA EMPLEADO
-        let filtrados = lavados.filter(l => l.lavador === lavadorActual && l.estado === "Abierto");
-        let totalProducido = filtrados.reduce((sum, l) => sum + l.valor, 0);
+        let filtrados = Array.isArray(lavados) ? lavados.filter(l => l.lavador === lavadorActual && l.estado === "Abierto") : [];
+        let totalProducido = filtrados.reduce((sum, l) => sum + (l.valor || 0), 0);
         let gananciaEmpleado = totalProducido * 0.40;
 
-        let misPrestamos = prestamos.filter(p => p.lavador === lavadorActual);
-        let totalMisPrestamos = misPrestamos.reduce((sum, p) => sum + p.monto, 0);
+        let misPrestamos = Array.isArray(prestamos) ? prestamos.filter(p => p.lavador === lavadorActual) : [];
+        let totalMisPrestamos = misPrestamos.reduce((sum, p) => sum + (p.monto || 0), 0);
 
         document.getElementById('total-producido').innerText = `$${totalProducido.toLocaleString()}`;
         document.getElementById('total-ganancia').innerText = `$${gananciaEmpleado.toLocaleString()}`;
@@ -185,8 +181,8 @@ async function actualizarPanel() {
         }
 
         // 2. RENDERS VISTA ADMINISTRADOR (GLOBALES)
-        let lavadosAbiertosGlobal = lavados.filter(l => l.estado === "Abierto");
-        let cajaTotalGeneral = lavadosAbiertosGlobal.reduce((sum, l) => sum + l.valor, 0);
+        let lavadosAbiertosGlobal = Array.isArray(lavados) ? lavados.filter(l => l.estado === "Abierto") : [];
+        let cajaTotalGeneral = lavadosAbiertosGlobal.reduce((sum, l) => sum + (l.valor || 0), 0);
         let nominaTotalGeneral = cajaTotalGeneral * 0.40;
 
         document.getElementById('admin-caja-total').innerText = `$${cajaTotalGeneral.toLocaleString()}`;
@@ -197,11 +193,11 @@ async function actualizarPanel() {
         contenedorLiquidacion.innerHTML = ""; 
 
         listaEmpleados.forEach(emp => {
-            let lavadosEmp = lavados.filter(l => l.lavador === emp && l.estado === "Abierto");
-            let totalEmp = lavadosEmp.reduce((sum, l) => sum + l.valor, 0) * 0.40;
+            let lavadosEmp = Array.isArray(lavados) ? lavados.filter(l => l.lavador === emp && l.estado === "Abierto") : [];
+            let totalEmp = lavadosEmp.reduce((sum, l) => sum + (l.valor || 0), 0) * 0.40;
             
-            let prestamosEmp = prestamos.filter(p => p.lavador === emp);
-            let totalPrestamosEmp = prestamosEmp.reduce((sum, p) => sum + p.monto, 0);
+            let prestamosEmp = Array.isArray(prestamos) ? prestamos.filter(p => p.lavador === emp) : [];
+            let totalPrestamosEmp = prestamosEmp.reduce((sum, p) => sum + (p.monto || 0), 0);
             
             let netoAPagar = totalEmp - totalPrestamosEmp;
 
@@ -232,9 +228,9 @@ async function finalizarDia() {
             for (let lavado of lavados) {
                 if (lavado.estado === "Abierto") {
                     await fetch(`${API_URL_LAVADOS}/${lavado.id}`, {
-                        method: 'PATCH',
+                        method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ estado: "Finalizado" })
+                        body: JSON.stringify({ ...lavado, estado: "Finalizado" })
                     });
                 }
             }
